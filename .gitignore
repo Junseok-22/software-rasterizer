@@ -38,6 +38,7 @@
 *.exe
 *.out
 *.app
+main
 
 # Build directories
 build/
@@ -67,3 +68,6 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# generated image output
+*.tga
