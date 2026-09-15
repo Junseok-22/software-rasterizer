@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <algorithm>
+#include <cmath>
 
 constexpr TGAColor red = {0,0,255,255};
 
@@ -70,6 +71,21 @@ void triangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, const TGAColor &color)
     }
 }   
 
+Vec3f cross(Vec3f a, Vec3f b) {
+    return { a.y*b.z - a.z*b.y,
+             a.z*b.x - a.x*b.z,
+             a.x*b.y - a.y*b.x };
+}
+
+float dot(Vec3f a, Vec3f b) {
+    return a.x*b.x + a.y*b.y + a.z*b.z;
+}
+
+Vec3f normalize(Vec3f v) {
+    float len = std::sqrt(dot(v, v));
+    return { v.x/len, v.y/len, v.z/len };
+}
+
 
 int main() {
     constexpr int width = 800;
@@ -102,11 +118,13 @@ int main() {
             faces.push_back(f);
         }
     }
-    
+
+    Vec3f light_dir = {0, 0, -1};
+
     for (int i = 0; i < faces.size(); i++) {
         std::vector<int> face = faces[i];
-        
-        Vec3f w0= verts[face[0]];
+
+        Vec3f w0 = verts[face[0]];
         Vec3f w1 = verts[face[1]];
         Vec3f w2 = verts[face[2]];
 
@@ -114,8 +132,16 @@ int main() {
         Vec2i p1 = { int((w1.x + 1.0) * width  / 2.0), int((w1.y + 1.0) * height / 2.0) };
         Vec2i p2 = { int((w2.x + 1.0) * width  / 2.0), int((w2.y + 1.0) * height / 2.0) };
 
-        triangle(p0, p1, p2, framebuffer, red);
+        Vec3f edge1 = { w1.x - w0.x, w1.y - w0.y, w1.z - w0.z };
+        Vec3f edge2 = { w2.x - w0.x, w2.y - w0.y, w2.z - w0.z };
+        Vec3f n = normalize(cross(edge1, edge2));
+        float intensity = dot(n, light_dir);
+        if (intensity <= 0) continue;  
 
+        TGAColor shade = { (uint8_t)(255*intensity),
+                        (uint8_t)(255*intensity),
+                        (uint8_t)(255*intensity), 255 };
+        triangle(p0, p1, p2, framebuffer, shade);
     }
 
     framebuffer.write_tga_file("output.tga");
