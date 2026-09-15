@@ -93,6 +93,11 @@ Vec3f normalize(Vec3f v) {
     return { v.x/len, v.y/len, v.z/len };
 }
 
+Vec3f project(Vec3f v) {
+    float c = 3.0f;
+    float w = 1.0f - v.z / c;     
+    return { v.x / w, v.y / w, v.z / w };
+}
 
 int main() {
     constexpr int width = 800;
@@ -134,16 +139,20 @@ int main() {
     for (int i = 0; i < faces.size(); i++) {
         std::vector<int> face = faces[i];
 
-        Vec3f w0 = verts[face[0]];
-        Vec3f w1 = verts[face[1]];
-        Vec3f w2 = verts[face[2]];
+        Vec3f o0 = verts[face[0]];    // original, for normal
+        Vec3f o1 = verts[face[1]];
+        Vec3f o2 = verts[face[2]];
+
+        Vec3f w0 = project(o0);       // projected, for screen + depth
+        Vec3f w1 = project(o1);
+        Vec3f w2 = project(o2);
 
         Vec2i p0 = { int((w0.x + 1.0) * width  / 2.0), int((w0.y + 1.0) * height / 2.0) };
         Vec2i p1 = { int((w1.x + 1.0) * width  / 2.0), int((w1.y + 1.0) * height / 2.0) };
         Vec2i p2 = { int((w2.x + 1.0) * width  / 2.0), int((w2.y + 1.0) * height / 2.0) };
 
-        Vec3f edge1 = { w1.x - w0.x, w1.y - w0.y, w1.z - w0.z };
-        Vec3f edge2 = { w2.x - w0.x, w2.y - w0.y, w2.z - w0.z };
+        Vec3f edge1 = { o1.x - o0.x, o1.y - o0.y, o1.z - o0.z };
+        Vec3f edge2 = { o2.x - o0.x, o2.y - o0.y, o2.z - o0.z };
         Vec3f n = normalize(cross(edge1, edge2));
         float intensity = dot(n, light_dir);
         if (intensity <= 0) continue;  
