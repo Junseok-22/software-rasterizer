@@ -7,6 +7,7 @@
 #include <string>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 constexpr TGAColor red = {0,0,255,255};
 
@@ -51,7 +52,8 @@ Vec3f barycentric(Vec2i a, Vec2i b, Vec2i c, Vec2i p) {
         return Vec3f{1.0f - (vu.x + vu.y) / vu.z, vu.y / vu.z, vu.x / vu.z};
 }
 
-void triangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, const TGAColor &color) {
+void triangle(Vec2i a, Vec2i b, Vec2i c, float za, float zb, float zc, float *zbuffer, TGAImage &image, 
+              const TGAColor &color) {
     int minx = std::min({a.x, b.x, c.x});
     int maxx = std::max({a.x, b.x, c.x});
     int miny = std::min({a.y, b.y, c.y});
@@ -66,7 +68,12 @@ void triangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, const TGAColor &color)
         for (int y = miny; y <= maxy; y++){
             Vec3f bc = barycentric(a, b, c, {x,y});
             if (bc.x < 0 || bc.y < 0 || bc.z < 0) continue; 
-            image.set(x, y, color);
+            float z = za*bc.x + zb*bc.y + zc*bc.z;
+            int idx = x + y * image.width();
+            if (zbuffer[idx] < z) {
+                zbuffer[idx] = z;
+                image.set(x, y, color);
+            }
         }
     }
 }   
@@ -119,6 +126,9 @@ int main() {
         }
     }
 
+
+    std::vector<float> zbuffer(width * height, -std::numeric_limits<float>::max());
+
     Vec3f light_dir = {0, 0, -1};
 
     for (int i = 0; i < faces.size(); i++) {
@@ -141,7 +151,7 @@ int main() {
         TGAColor shade = { (uint8_t)(255*intensity),
                         (uint8_t)(255*intensity),
                         (uint8_t)(255*intensity), 255 };
-        triangle(p0, p1, p2, framebuffer, shade);
+        triangle(p0, p1, p2, w0.z, w1.z, w2.z, zbuffer.data(), framebuffer, shade);
     }
 
     framebuffer.write_tga_file("output.tga");
