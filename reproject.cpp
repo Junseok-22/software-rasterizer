@@ -36,49 +36,58 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, const TGAColor &color
 }
 
 int main() {
-    // Camera intrinsics (KITTI-like)
-    float fx = 721.5f, fy = 721.5f;
-    float cx = 609.5f, cy = 172.8f;
+    // KITTI intrinsics 
+    float fx = 707.0493f, fy = 707.0493f;
+    float cx = 604.0814f, cy = 180.5066f;
 
-    int img_w = 1242, img_h = 375;
-    TGAImage image(img_w, img_h, TGAImage::RGB);
+    // Load KITTI image
+    TGAImage image;
+    image.read_tga_file("kitti/000000.tga");
+    image.flip_vertically();
 
-    // 8 corners of a cuboid ahead of the camera (meters, camera coords)
-    // x in {-1, 1}, y in {-1, 1}, z in {8, 10}
+    // Label: Pedestrian, dims h=1.89 w=0.48 l=1.20, loc (1.84,1.47,8.41), yaw~0
+    float h = 1.89f, w = 0.48f, l = 1.20f;
+    float lx = 1.84f, ly = 1.47f, lz = 8.41f;
+
+    //bounds
+    float x0 = lx - l/2, x1 = lx + l/2;
+    float z0 = lz - w/2, z1 = lz + w/2;
+    float yb = ly;        
+    float yt = ly - h;     
+
     std::vector<Vec3f> corners = {
-        {-1, -1,  8},  // 0
-        { 1, -1,  8},  // 1
-        { 1,  1,  8},  // 2
-        {-1,  1,  8},  // 3  (front face: 0-1-2-3)
-        {-1, -1, 10},  // 4
-        { 1, -1, 10},  // 5
-        { 1,  1, 10},  // 6
-        {-1,  1, 10},  // 7  (back face: 4-5-6-7)
+        {x0, yb, z0}, 
+        {x1, yb, z0},  
+        {x1, yt, z0},  
+        {x0, yt, z0},  
+        {x0, yb, z1},  
+        {x1, yb, z1},  
+        {x1, yt, z1},  
+        {x0, yt, z1},  
+
     };
 
-    // 12 edges as index pairs: 4 front, 4 back, 4 connecting
     std::vector<std::pair<int,int>> edges = {
-        {0,1},{1,2},{2,3},{3,0},   // front face
-        {4,5},{5,6},{6,7},{7,4},   // back face
-        {0,4},{1,5},{2,6},{3,7},   // front-to-back connectors
+        {0,1},{1,2},{2,3},{3,0},
+        {4,5},{5,6},{6,7},{7,4},
+        {0,4},{1,5},{2,6},{3,7},
     };
 
     std::vector<Vec2i> proj;
 
     for (auto &c : corners) {
-    if (c.z <= 0) continue;
-    float u = fx * (c.x / c.z) + cx;
-    float v = fy * (c.y / c.z) + cy;
-    proj.push_back({ int(u), int(v) });
-    std::cout << u << ", " << v << "\n";
-    
+        if (c.z <= 0) continue;
+        float u = fx * (c.x / c.z) + cx;
+        float v = fy * (c.y / c.z) + cy;
+        proj.push_back({ int(u), image.height() - 1 - int(v) });
+        std::cout << u << ", " << v << "\n";
     }
 
     
     for (auto &e : edges) {
-    line(proj[e.first].x, proj[e.first].y,
-         proj[e.second].x, proj[e.second].y,
-         image, red);
+        line(proj[e.first].x, proj[e.first].y,
+            proj[e.second].x, proj[e.second].y,
+            image, red);
     }
 
     image.write_tga_file("reproject.tga");
