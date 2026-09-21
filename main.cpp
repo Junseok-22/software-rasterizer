@@ -162,7 +162,7 @@ int main() {
                         (uint8_t)(255*intensity), 255 };
         triangle(p0, p1, p2, w0.z, w1.z, w2.z, zbuffer.data(), framebuffer, shade);
     }
-
+    
     framebuffer.write_tga_file("output.tga");
     return 0;
 }
